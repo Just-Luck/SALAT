@@ -1,61 +1,49 @@
-const rus = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-const eng = "abcdefghijklmnopqrstuvwxyz";
-const digits = "0123456789";
+const fs = require("fs");
 
-//*Работает с ru и eng алфавитом
-function Salat(str, shift) {
-  str = str.toLowerCase();
-  let res = "";
-  for (let i = 0; i < str.length; i++) {
-    if (rus.includes(str[i])) {
-      let index = rus.indexOf(str[i]);
-      index = (index + shift + rus.length) % rus.length; // Добавлено условие для отрицательного сдвига
-      res += rus[index];
-    } else if (eng.includes(str[i])) {
-      let index = eng.indexOf(str[i]);
-      index = (index + shift + eng.length) % eng.length;
-      res += eng[index];
-    } else if (digits.includes(str[i])) {
-      let index = digits.indexOf(str[i]);
-      index = (index + shift + digits.length) % digits.length;
-      res += digits[index];
-    } else {
-      res += str[i];
-    }
-  }
-  return res;
+const alphabet = {
+  ru: "абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+  eng: "abcdefghijklmnopqrstuvwxyz",
+};
+
+function Salat(str, shift, language) {
+  const targetAlphabet = alphabet[language];
+  return str
+    .toLowerCase()
+    .split("")
+    .map((char) => {
+      const index = targetAlphabet.indexOf(char);
+      if (index !== -1) {
+        const newIndex = (index + shift) % targetAlphabet.length;
+        return targetAlphabet[newIndex];
+      }
+      return char;
+    })
+    .join("");
 }
-
-const fs = require("fs"); //* Модуль для работы с файлами
-let input_ru = fs.readFileSync("russian.txt", "utf8"); //*Считываем input файл
-let input_eng = fs.readFileSync("english.txt", "utf8"); //*Считываем input файл
 
 function getFrequency(input) {
   const frequency = {};
-  input = input.replace(/\s/g, "").toLowerCase();
-  let all = input.length;
-  input = input.toLowerCase();
-  for (let char of input) {
-    if (char in frequency) {
-      frequency[char]++;
-    } else {
-      frequency[char] = 1;
-    }
-  }
-  for (let char in frequency) {
-    frequency[char] /= all;
+  const sanitizedInput = input.replace(/\s/g, "").toLowerCase();
+  const totalChars = sanitizedInput.length;
+  for (let i = 0; i < totalChars; i++) {
+    const char = sanitizedInput[i];
+    frequency[char] = (frequency[char] || 0) + 1 / totalChars;
   }
   return frequency;
 }
 
-function findShift(Table1, Table2, language) {
-  const sortedTable1 = Object.entries(Table1).sort((a, b) => b[1] - a[1]);
-  const sortedTable2 = Object.entries(Table2).sort((a, b) => b[1] - a[1]);
-  if (language == "ru")
-    return rus.indexOf(sortedTable1[0][0]) - rus.indexOf(sortedTable2[0][0]);
-  if (language == "eng")
-    return eng.indexOf(sortedTable1[0][0]) - eng.indexOf(sortedTable2[0][0]);
+function findShift(table1, table2, language, trying) {
+  const sortedTable1 = Object.entries(table1).sort((a, b) => b[1] - a[1]);
+  const sortedTable2 = Object.entries(table2).sort((a, b) => b[1] - a[1]);
+  const alphabetForLanguage = alphabet[language];
+  return (
+    alphabetForLanguage.indexOf(sortedTable2[trying][0]) -
+    alphabetForLanguage.indexOf(sortedTable1[0][0])
+  );
 }
+
+const input_ru = fs.readFileSync("russian.txt", "utf8");
+const input_eng = fs.readFileSync("english.txt", "utf8");
 
 let text_ru = `Предательство — это одно из самых глубоких и низменных проявлений человеческой природы. Это явление, которое оказывает разрушительное воздействие на отношения между людьми, на доверие и на общественную солидарность. Предательство порождает страдание, разочарование и потерю веры в людей.
 
@@ -81,32 +69,37 @@ However, it is important to remember that betrayal is not an inevitable attribut
 
 Betrayal is a topic that worries and worries us. It reminds us of the complexity of human relationships and the need for careful`;
 
-let shift = 33;
-let language = "ru";
+let shift = 5;
+let language = "eng";
 
-let shiftedText;
-let table1;
-let table2;
-let decodshift;
-let decodeStr;
-
-if (language == "ru") {
-  shiftedText = Salat(text_ru, shift);
-  table1 = getFrequency(input_ru);
-  table2 = getFrequency(shiftedText);
-  decodshift = findShift(table1, table2, language);
-  decodeStr = Salat(shiftedText, decodshift);
-} else {
-  shiftedText = Salat(text_eng, shift);
-  table1 = getFrequency(input_eng);
-  table2 = getFrequency(shiftedText);
-  decodshift = findShift(table1, table2, language);
-  decodeStr = Salat(shiftedText, decodshift);
-}
+let shiftedText = Salat(
+  language === "ru" ? text_ru : text_eng,
+  shift,
+  language
+);
+let table1 = getFrequency(language === "ru" ? input_ru : input_eng);
+let table2 = getFrequency(shiftedText);
+let decodshift = findShift(table1, table2, language, 0);
+if (decodshift < 0) decodshift += alphabet[language].length;
+let decodeStr = Salat(shiftedText, decodshift, language);
 
 console.log("Зашифрованный текст:", shiftedText);
-console.log(`----------------------------------------------`);
+console.log(
+  "-------------------------------------------------------------------------------\n"
+);
 console.log("Декодированный текст:", decodeStr);
-console.log(`----------------------------------------------`);
-console.log(`Изначальный сдвиг ${shift}`);
-console.log(`Сдвиг полученный анализом частот ${Math.abs(decodshift)}`);
+console.log(
+  "-------------------------------------------------------------------------------\n"
+);
+console.table([{ "✅ Изначальный сдвиг": shift }]);
+console.table([{ "1️⃣ Сдвиг первичным анализом частот": decodshift }]);
+console.table([
+  {
+    "2️⃣ Сдвиг вторичным анализом частот": findShift(
+      table1,
+      table2,
+      language,
+      1
+    ),
+  },
+]);
