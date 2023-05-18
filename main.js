@@ -13,7 +13,12 @@ function Salat(str, shift, language) {
     .map((char) => {
       const index = targetAlphabet.indexOf(char);
       if (index !== -1) {
-        const newIndex = (index + shift) % targetAlphabet.length;
+        let newIndex = index + shift;
+        if (newIndex < 0) {
+          newIndex = targetAlphabet.length + (newIndex % targetAlphabet.length);
+        } else {
+          newIndex = newIndex % targetAlphabet.length;
+        }
         return targetAlphabet[newIndex];
       }
       return char;
@@ -69,8 +74,8 @@ However, it is important to remember that betrayal is not an inevitable attribut
 
 Betrayal is a topic that worries and worries us. It reminds us of the complexity of human relationships and the need for careful`;
 
-let shift = 5;
-let language = "eng";
+let shift = 30;
+let language = "ru";
 
 let shiftedText = Salat(
   language === "ru" ? text_ru : text_eng,
@@ -81,7 +86,7 @@ let table1 = getFrequency(language === "ru" ? input_ru : input_eng);
 let table2 = getFrequency(shiftedText);
 let decodshift = findShift(table1, table2, language, 0);
 if (decodshift < 0) decodshift += alphabet[language].length;
-let decodeStr = Salat(shiftedText, decodshift, language);
+let decodeStr = Salat(shiftedText, -decodshift, language);
 
 console.log("Зашифрованный текст:", shiftedText);
 console.log(
